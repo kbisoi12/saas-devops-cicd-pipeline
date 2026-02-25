@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t saas-app:ci .
+
+      - name: Smoke test (container runs)
+        run: |
+          docker run -d -p 8080:80 --name saas saas-app:ci
+          sleep 2
+          curl -fsS http://localhost:8080 >/dev/null
+          docker rm -f saas
+
+      - name: Container vulnerability scan (Trivy)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: saas-app:ci
+          format: table
+          exit-code: "0"
+
+      - name: Helm render + manifest validation
+        run: bash scripts/helm_render_validate.sh

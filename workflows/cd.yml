@@ -1,0 +1,28 @@
+name: CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version tag
+        id: ver
+        run: echo "tag=$(date -u +%Y%m%d)-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build release image
+        run: docker build -t saas-app:${{ steps.ver.outputs.tag }} .
+
+      - name: Publish (placeholder if no registry)
+        run: |
+          echo "Would publish image as:"
+          echo "${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ steps.ver.outputs.tag }}"
+
+      - name: Deploy (dry-run)
+        run: |
+          echo "Deploy would run: helm upgrade --install saas ./helm/saas-app"
+          echo "Dry-run validates chart and config."
